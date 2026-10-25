@@ -37,24 +37,49 @@ The system should also have the following qualities:
 ## 5. User Stories
 
 ### User Story 1: Reporting a Lost Item
-
 As a student, I want to report an item I have lost so that I can have a better chance of finding it.
 
 ### User Story 2: Reporting a Found Item
-
 As a student, I want to report an item I have found so that its owner can find it.
 
-### User Story 3: Searching for an Item
+### User Story 3: Adding Item Details
+As a user, I want to add details such as the item's name, color, description, and location so that others can recognize it more easily.
 
-As a student, I want to search for lost and found items so that I can check if my missing item has been reported.
+### User Story 4: Searching for an Item
+As a user, I want to search for an item by its name so that I can quickly find related reports.
 
-### User Story 4: Viewing Item Details
+### User Story 5: Filtering Search Results
+As a user, I want to filter items by category or date so that I can find the items I am looking for more easily.
 
-As a user, I want to see the details of an item so that I can check if it matches the item I am looking for.
+### User Story 6: Viewing Item Details
+As a user, I want to view the details of a reported item so that I can check if it matches the item I lost or found.
 
-### User Story 5: Following Up on a Report
+### User Story 7: Browsing All Reports
+As a user, I want to see a list of lost and found items so that I can check the latest reports.
 
-As a user, I want to check for updates on a report so that I know if there is any new information about the item.
+### User Story 8: Updating a Report
+As a user, I want to edit the information in my report so that I can correct mistakes or add new details.
+
+### User Story 9: Deleting a Report
+As a user, I want to delete my report if it is no longer needed so that outdated information does not remain in the system.
+
+### User Story 10: Contacting the Item Finder
+As a student, I want to contact the person who found my item so that I can arrange to get it back.
+
+### User Story 11: Marking an Item as Returned
+As a user, I want to mark an item as returned so that others know it has been found and returned to its owner.
+
+### User Story 12: Checking Report Status
+As a user, I want to check the status of my report so that I know whether there has been any progress.
+
+### User Story 13: Receiving Updates
+As a user, I want to receive updates about my report so that I do not miss important information.
+
+### User Story 14: Reporting Incorrect Information
+As a user, I want to report an incorrect or suspicious listing so that the system can stay useful and reliable.
+
+### User Story 15: Managing Reports
+As a university staff member, I want to review and manage item reports so that the lost-and-found system stays organized.
 
 ## 6. Notes
 
