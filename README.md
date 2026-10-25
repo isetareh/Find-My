@@ -21,7 +21,7 @@ The main goal is to make the lost-and-found process more organized, accessible, 
 ### Documentation
 The initial software analysis documents are available in the `docs/` directory:
 
-- [Requirements and User Stories](docs/requirements.md)
+- [Requirements and User Stories](docs/SRS.md)
 - [Use Case Diagram](docs/use-case.md)
 - [Activity Diagram](docs/activity-diagram.md)
 
