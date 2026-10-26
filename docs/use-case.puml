@@ -1,0 +1,128 @@
+
+@startuml
+left to right direction
+
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam actorStyle awesome
+
+skinparam usecase {
+    BackgroundColor White
+    BorderColor #40566F
+    ArrowColor #40566F
+}
+
+skinparam actor {
+    BorderColor #40566F
+}
+
+actor "Student / User" as Student
+actor "Authorized University Staff" as Staff
+
+rectangle "Find My - University Lost and Found System" {
+
+    package "Reporting and Report Management" {
+        usecase "Report a Lost Item" as UC1
+        usecase "Report a Found Item" as UC2
+        usecase "Enter Item Details" as UC3
+        usecase "Browse Item Listings" as UC4
+        usecase "View Public Report Details" as UC7
+        usecase "Edit Own Report" as UC8
+        usecase "Delete Own Report" as UC9
+    }
+
+    package "Search and Discovery" {
+        usecase "Search for an Item" as UC5
+        usecase "Filter Search Results" as UC6
+        usecase "Report a Suspicious Listing" as UC14
+    }
+
+    package "Ownership Claims and Return" {
+        usecase "Contact the Item Finder" as UC10
+        usecase "Submit Ownership Claim" as UC16
+        usecase "Provide Identifying Evidence" as UC18
+        usecase "Check Report or Claim Status" as UC12
+        usecase "Receive Report or Claim Updates" as UC13
+        usecase "Evaluate Ownership Claim" as UC19
+        usecase "Review Unverified or Disputed Claim" as UC17
+        usecase "Access Confidential Item Details" as UC20
+        usecase "Confirm Item Return" as UC11
+    }
+
+    package "Staff Administration" {
+        usecase "Review and Manage Reports" as UC15
+    }
+}
+
+' Student / user interactions
+Student -- UC1
+Student -- UC2
+Student -- UC4
+Student -- UC5
+Student -- UC6
+Student -- UC7
+Student -- UC8
+Student -- UC9
+Student -- UC10
+Student -- UC12
+Student -- UC13
+Student -- UC14
+Student -- UC16
+Student -- UC18
+
+' Authorized staff interactions
+Staff -- UC4
+Staff -- UC7
+Staff -- UC15
+Staff -- UC17
+Staff -- UC20
+Staff -- UC11
+
+' Required behavior when creating reports
+UC1 ..> UC3 : <<include>>
+UC2 ..> UC3 : <<include>>
+
+' Claim submission requires identifying evidence
+UC16 ..> UC18 : <<include>>
+
+' Claim evaluation is part of the claim workflow
+UC16 ..> UC19 : <<include>>
+
+' Manual review is conditional when verification is inconclusive
+UC17 ..> UC19 : <<extend>>
+
+' Confidential details are accessed during authorized manual review
+UC17 ..> UC20 : <<include>>
+
+note right of UC19
+    Compare submitted evidence with
+    confidential item details.
+    Never reveal correct answers or
+    individual field matches to claimants.
+end note
+
+note bottom of UC11
+    Confirm return only after ownership
+    is sufficiently verified and the
+    physical return has been confirmed.
+end note
+
+note bottom of UC13
+    Notifications must not disclose
+    confidential item details or
+    ownership evidence.
+end note
+
+note bottom of UC8
+    Users may edit only their own reports.
+    Preserve public and confidential
+    information separation.
+end note
+
+note bottom of UC9
+    Users may delete only their own reports,
+    subject to applicable record rules.
+end note
+
+@enduml
