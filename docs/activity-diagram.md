@@ -1,117 +1,245 @@
-
 # Find My — Activity Diagram
 
-## 1. Overview
+## 1. Purpose
 
-This document describes the activity diagram for **Find My**, a university lost-and-found system. It illustrates the main workflows, decisions, and interactions between students/users, the Find My System, and authorized university staff.
+This document describes the main operational workflows for **Find My**, a university lost-and-found system. It is aligned with the functional requirements (`FR-01` through `FR-19`), user stories (`User Story 1` through `User Story 18`), and the Use Case Diagram (`UC1` through `UC19`) defined in `SRS.md`.
 
-The diagram covers the main processes associated with use cases UC1–UC20 defined in the project's Use Case Diagram.
+The diagram models the end-to-end activities and decision points for reporting lost and found items, optionally hiding private item details, browsing and searching public listings, managing reports, verifying ownership claims when necessary, and marking items as returned.
 
-## 2. Actors and Responsibilities
+## 2. Actors and Swimlanes
 
-- **Student / User:** Reports lost or found items, searches listings, views item details, manages personal reports, submits ownership claims, provides identifying evidence, receives status updates, contacts the finder, and participates in the item return process.
-- **Find My System:** Stores reports, separates public information from confidential details, evaluates ownership claims, and sends status updates without revealing sensitive information.
-- **Authorized University Staff:** Reviews reports, investigates unverified or disputed ownership claims, accesses confidential item details when authorized, and confirms completed item returns.
+- **Student** — initiates report creation (`UC1`, `UC2`, `UC3`), optionally selectsfound-item details to keep private (`UC16`), browses/searches/filters listings (`UC4`, `UC5`, `UC7`), views public report details (`UC6`), manages their own reports (`UC8`, `UC9`), checks status or receives updates (`UC12`, `UC13`), flags suspicious listings (`UC14`), submits ownership claims with identifying details (`UC17`), contacts the finder (`UC10`), and marks an item as returned (`UC11`).
+- **Find My System** — stores reports while keeping public and private details separated, serves public listings, and dispatches report updates (`UC13`) when notifications are enabled without exposing private details.
+- **Authorized Ownership Reviewer** — reviews ownership claims when necessary (`UC18`) and accesses private item details for verification (`UC19`), as permitted by `FR-18` and `FR-19`.
+- **University Staff** — reviews and manages reports (`UC15`), may act as an authorized reviewer for ownership claims (`UC18`), and marks reports as returned (`UC11`) once the item is given back to its owner.
 
-## 3. Activity Diagram
+## 3. Activity Diagram (PlantUML)
+
+The following code can be rendered directly by GitHub-compatible PlantUML tooling or pasted into a PlantUML renderer.
+
+```plantuml
+@startuml
+skinparam shadowing false
+skinparam conditionStyle inside
+
+|Student|
+start
+:Access Find My System;
+
+switch (Select Workflow)
+
+case ( Create a Report )
+  if (Report Type?) then (Lost Item)
+    :Report a Lost Item (UC1);
+    :Enter Item Details (UC3)\n[Name, Color, Description, Location, Date];
+  else (Found Item)
+    :Report a Found Item (UC2);
+    :Enter Item Details (UC3)\n[Name, Color, Description, Location, Date];
+    if (Keep specific details private? [<<extend>>]) then (Yes)
+      :Select Details to Keep Private (UC16);
+    else (No)
+    endif
+  endif
+
+  |Find My System|
+  :Save Report & Separate Public Listing\nfrom Private Item Details;
+  if (Notifications enabled for matching/status updates?) then (Yes)
+    |Student|
+    :Receive Report Updates (UC13);
+  else (No)
+  endif
+  stop
+
+case ( Manage Own Report )
+  |Student|
+  if (Action on Own Report?) then (Check Status)
+    :Check Report Status (UC12);
+  elseif (Edit) then
+    :Edit Own Report (UC8);
+  else (Delete)
+    :Delete Own Report (UC9);
+  endif
+  stop
+
+case ( Browse, Search & Claim an Item )
+  |Student|
+  if (Discovery Method?) then (Browse)
+    :Browse Item Reports (UC4);
+  else (Search)
+    :Search for an Item (UC5);
+    if (Filter by category or date?) then (Yes)
+      :Filter Search Results (UC7);
+    else (No)
+    endif
+  endif
+
+  :View Public Report Details (UC6);
+
+  if (Contains incorrect or suspicious information?) then (Yes)
+    :Report a Suspicious Listing (UC14);
+    |University Staff|
+    :Review and Manage Reports (UC15);
+    stop
+  else (No)
+  endif
+
+  |Student|
+  if (Proceed with Ownership Claim?) then (No)
+    stop
+  else (Yes)
+    :Submit Ownership Claim with Identifying Details (UC17);
+  endif
+
+  |Find My System|
+  if (Is formal claim review necessary? [FR-18]) then (Yes - Review Required)
+    |Authorized Ownership Reviewer|
+    :Review Ownership Claim (UC18);
+    :Access Private Item Details for Verification (UC19);
+
+    if (Is ownership established?) then (No - Claim Rejected)
+      |Find My System|
+      :Update Claim Status Without Exposing Private Details;
+      |Student|
+      :Receive Report Updates (UC13);
+      :Check Report Status (UC12);
+      stop
+    else (Yes - Claim Approved)
+    endif
+  else (No - Direct Coordination Permitted)
+  endif
+
+  |Student|
+  :Receive Report Updates (UC13);
+  :Check Report Status (UC12);
+  :Contact the Item Finder (UC10);
+  :Arrange and Complete Physical Item Return;
+
+  |University Staff|
+  note right
+    Either the Student or University Staff
+    marks the report as returned (UC11)
+    after actual handover.
+  end note
+  :Mark Item as Returned (UC11);
+  stop
+
+case ( Staff Report Administration )
+  |University Staff|
+  :Review and Manage Reports (UC15);
+  stop
+
+endswitch
+@enduml
+```
+
+## 4. Activity Diagram (Mermaid — Native GitHub Preview)
+
+GitHub natively renders Mermaid diagrams inside Markdown files. This diagram mirrors the PlantUML workflow above:
 
 ```mermaid
 flowchart TD
-    Start([Start]) --> Access[Access Find My System]
-    Access --> Choice{Select User Action}
+    Start(["Start: Access Find My"]) --> Workflow{"Select Workflow"}
 
-    subgraph Reporting["Reporting and Managing Items"]
-        Choice -->|Create Report| Type{Lost or Found?}
-        Type -->|Lost| UC1["UC1: Report a Lost Item"]
-        Type -->|Found| UC2["UC2: Report a Found Item"]
-        UC1 --> UC3["UC3: Enter Item Details"]
-        UC2 --> UC3
-        UC3 --> Save["System: Save Report and Separate Public and Confidential Details"]
-        Save --> UC15["UC15: Staff Review and Manage Reports"]
+    %% Workflow 1: Create Report
+    Workflow -- "Create Report" --> ReportType{"Lost or Found Item?"}
+    ReportType -- "Lost" --> UC1["UC1: Report a Lost Item"]
+    UC1 --> UC3_Lost["UC3: Enter Item Details (<<include>>)
+    Name, Color, Description, Location, Date"]
+    
+    ReportType -- "Found" --> UC2["UC2: Report a Found Item"]
+    UC2 --> UC3_Found["UC3: Enter Item Details (<<include>>)
+    Name, Color, Description, Location, Date"]
+    UC3_Found --> PrivChoice{"Keep specific details private?
+    (Optional <<extend>>)"}
+    PrivChoice -- "Yes" --> UC16["UC16: Select Details to Keep Private"]
+    PrivChoice -- "No" --> SaveReport["System: Publish Public Listing & Protect Private Details"]
+    UC16 --> SaveReport
+    UC3_Lost --> SaveReport
+    SaveReport --> EndCreate(["End Reporting Workflow"])
 
-        Choice -->|Manage Own Report| Manage{Edit or Delete?}
-        Manage -->|Edit| UC8["UC8: Edit Own Report"]
-        Manage -->|Delete| UC9["UC9: Delete Own Report"]
-    end
+    %% Workflow 2: Manage Own Report
+    Workflow -- "Manage Own Report" --> OwnAction{"Select Action"}
+    OwnAction -- "Check Status" --> UC12_Own["UC12: Check Report Status"]
+    OwnAction -- "Edit" --> UC8["UC8: Edit Own Report"]
+    OwnAction -- "Delete" --> UC9["UC9: Delete Own Report"]
+    UC12_Own --> EndOwn(["End Report Management"])
+    UC8 --> EndOwn
+    UC9 --> EndOwn
 
-    subgraph Discovery["Browsing and Searching"]
-        Choice -->|Find an Item| Discover{Browse or Search?}
-        Discover -->|Browse| UC4["UC4: Browse Item Listings"]
-        Discover -->|Search| UC5["UC5: Search for an Item"]
-        UC5 --> Filters{Apply Filters?}
-        Filters -->|Yes| UC6["UC6: Filter Search Results"]
-        Filters -->|No| UC7["UC7: View Public Report Details"]
-        UC4 --> UC7
-        UC6 --> UC7
+    %% Workflow 3: Browse, Search, and Claim
+    Workflow -- "Find / Claim Item" --> Discover{"Browse or Search?"}
+    Discover -- "Browse" --> UC4["UC4: Browse Item Reports"]
+    Discover -- "Search" --> UC5["UC5: Search for an Item"]
+    UC5 --> FilterQ{"Apply category or date filter?"}
+    FilterQ -- "Yes" --> UC7["UC7: Filter Search Results"]
+    FilterQ -- "No" --> UC6["UC6: View Public Report Details"]
+    UC4 --> UC6
+    UC7 --> UC6
 
-        UC7 --> Suspicious{Is the Listing Suspicious?}
-        Suspicious -->|Yes| UC14["UC14: Report Suspicious Listing"]
-        UC14 --> Review["UC15: Staff Review and Manage Reports"]
-        Suspicious -->|No| Match{Does the Item Match?}
-        Match -->|No| EndBrowse([End])
-    end
+    UC6 --> SuspiciousQ{"Is listing suspicious or incorrect?"}
+    SuspiciousQ -- "Yes" --> UC14["UC14: Report a Suspicious Listing"]
+    UC14 --> UC15["UC15: Staff Review and Manage Reports"]
+    UC15 --> EndSuspicious(["End Moderation Flow"])
 
-    subgraph Claim["Ownership Verification"]
-        Match -->|Yes| UC16["UC16: Submit Ownership Claim"]
-        UC16 --> UC18["UC18: Provide Identifying Evidence"]
-        UC18 --> UC19["UC19: Evaluate Ownership Claim"]
-        UC19 --> Conclusive{Is the Evaluation Conclusive?}
+    SuspiciousQ -- "No" --> ClaimQ{"Is this the user's lost item?"}
+    ClaimQ -- "No" --> EndSearch(["End Browsing"])
+    ClaimQ -- "Yes" --> UC17["UC17: Submit Ownership Claim with Identifying Details"]
 
-        Conclusive -->|No: Disputed or Uncertain| UC17["UC17: Staff Review of Unverified or Disputed Claim"]
-        UC17 --> UC20["UC20: Access Confidential Item Details"]
-        UC20 --> Verified{Is Ownership Verified?}
-        Conclusive -->|Yes| Verified
+    UC17 --> ReviewNeeded{"Is ownership review necessary? (FR-18)"}
+    ReviewNeeded -- "Yes" --> UC18["UC18: Reviewer / Staff Reviews Ownership Claim"]
+    UC18 --> UC19["UC19: Access Private Item Details for Verification (<<include>>)
+    Restricted to Authorized Reviewer"]
+    UC19 --> ClaimValid{"Is ownership verified?"}
 
-        Verified -->|No| Rejected["Claim Rejected"]
-        Rejected --> UC13R["UC13: Send Claim Status Update"]
-        UC13R --> UC12R["UC12: Check Report or Claim Status"]
+    ClaimValid -- "No" --> UC13_Rej["UC13: Receive Report Updates
+    (No private details exposed)"]
+    UC13_Rej --> UC12_Rej["UC12: Check Report Status"]
+    UC12_Rej --> EndRej(["End Claim: Not Verified"])
 
-        Verified -->|Yes| Approved["Claim Approved"]
-        Approved --> UC13A["UC13: Send Approval Update"]
-        UC13A --> UC12A["UC12: Check Report or Claim Status"]
-        UC12A --> UC10["UC10: Contact the Item Finder"]
-        UC10 --> Handover["Complete Physical Item Return"]
-        Handover --> UC11["UC11: Confirm Item Return"]
-    end
+    ClaimValid -- "Yes" --> ApprovedFlow["UC13 / UC12: Receive Update & Check Status"]
+    ReviewNeeded -- "No (Direct Flow)" --> ApprovedFlow
 
-    UC8 --> EndManage([End])
-    UC9 --> EndManage
-    UC15 --> EndReport([End])
-    Review --> EndSuspicious([End])
-    UC12R --> EndRejected([End: Claim Rejected])
-    UC11 --> EndReturned([End: Item Returned])
+    ApprovedFlow --> UC10["UC10: Contact the Item Finder"]
+    UC10 --> PhysicalReturn["Complete Physical Handover to Owner"]
+    PhysicalReturn --> UC11["UC11: Mark Item as Returned
+    (By Student or University Staff)"]
+    UC11 --> EndReturn(["End Workflow: Item Returned"])
 ```
 
-## 4. Design Decisions and Rules
+## 5. Activity Step Summary
 
-### 4.1 Report Creation
+| Activity Node | Actor / Swimlane | Description | Related Use Case & Requirement |
+|---|---|---|---|
+| Report a Lost / Found Item | Student | Initiates creation of a lost or found report. | `UC1` (`FR-01`; US 1), `UC2` (`FR-02`; US 2) |
+| Enter Item Details | Student | Mandatory step (`<<include>>`) capturing item name, color, description, location, and date. | `UC3` (`FR-03`; US 3) |
+| Select Details to Keep Private | Student | Optional step (`<<extend>>` on `UC2`) hiding sensitive attributes from public listings. | `UC16` (`FR-16`; US 16) |
+| Browse / Search / Filter Reports | Student | Explores public reports via recent listings, keyword search, or category/date filters. | `UC4` (`FR-04`; US 7), `UC5` (`FR-05`; US 4), `UC7` (`FR-07`; US 5) |
+| View Public Report Details | Student | Displays only the public fields of a report. | `UC6` (`FR-06`; US 6) |
+| Report a Suspicious Listing | Student | Flags incorrect or suspicious report content for staff review. | `UC14` (`FR-14`; US 14) |
+| Review and Manage Reports | University Staff | Staff inspect, moderate, and manage submitted reports. | `UC15` (`FR-15`; US 15) |
+| Edit / Delete Own Report | Student | Modifies or removes a report created by the user. | `UC8` (`FR-08`; US 8), `UC9` (`FR-09`; US 9) |
+| Submit Ownership Claim | Student | Submits a claim along with identifying details to establish ownership. | `UC17` (`FR-17`; US 17) |
+| Review Ownership Claim | Authorized Ownership Reviewer / Staff | Reviews the submitted claim when necessary before an item is returned. | `UC18` (`FR-18`; US 18) |
+| Access Private Item Details | Authorized Ownership Reviewer | Mandatory sub-step (`<<include>>` of `UC18`) accessing hidden details to verify a claim. | `UC19` (`FR-19`; US 16–18) |
+| Check Status / Receive Updates | Student / System | Tracks report progress and delivers notifications without exposing private details. | `UC12` (`FR-12`; US 12), `UC13` (`FR-13`; US 13) |
+| Contact the Item Finder | Student | Connects with the finder to arrange the physical return of the item. | `UC10` (`FR-10`; US 10) |
+| Mark Item as Returned | Student / University Staff | Updates the report state to returned only after the item has physically been given back. | `UC11` (`FR-11`; US 11) |
 
-Creating a lost-item report (UC1) or a found-item report (UC2) is followed by entering item details (UC3). The system stores public information separately from confidential identifying details.
+## 6. Relationship and Control-Flow Notes
 
-### 4.2 Report Management
+- **`<<include>>` — `UC1` to `UC3` and `UC2` to `UC3`:** In the activity flow, both `UC1` and `UC2` transition unconditionally into `UC3` because entering item details is required for every report.
+- **`<<extend>>` — `UC16` to `UC2`:** Modeled as a conditional decision branch immediately following found-item entry (`UC2`/`UC3`), allowing the finder to mark specific details as private before the listing is published.
+- **`<<include>>` — `UC18` to `UC19`:** Whenever the workflow enters `UC18` (Review Ownership Claim), it sequentially executes `UC19` (Access Private Item Details for Verification) within the Authorized Ownership Reviewer swimlane.
 
-Users can edit (UC8) or delete (UC9) only their own reports.
+## 7. Scope and Privacy Notes
 
-### 4.3 Ownership Claims
+1. **Separation of Public and Private Details:** `UC6` exposes only public report details. Any private details selected during `UC16` remain hidden from general users.
+2. **Restricted Verification Access:** `UC19` is strictly isolated within the `Authorized Ownership Reviewer` swimlane (`FR-19`). Submitting a claim (`UC17`) never grants the claimant visibility into the stored private details.
+3. **Conditional Claim Review:** In accordance with `FR-18`, the decision node preceding `UC18` reflects that ownership claims are reviewed *when necessary*, rather than forcing mandatory staff intervention on every single claim.
+4. **Actual Return Prerequisite:** `UC11` (Mark Item as Returned) is placed strictly at the end of the handover flow after the physical item has been returned to its owner.
+5. **Notification Privacy:** Updates sent via `UC13` notify users of new activity without leaking private item details or verification evidence.
+6. **Ownership Boundaries:** `UC8` (Edit) and `UC9` (Delete) are restricted to reports owned by the authenticated student.
 
-Submitting an ownership claim (UC16) requires identifying evidence (UC18). The system evaluates the claim (UC19) using confidential item details.
+## 8. Traceability Note
 
-### 4.4 Manual Review
-
-When automated evaluation is inconclusive or a claim is disputed, authorized staff review it (UC17) and access confidential item details (UC20) as necessary.
-
-### 4.5 Privacy and Status Updates
-
-Public listing details must not expose confidential information. Claim updates (UC13) must not disclose sensitive details or reveal which individual fields matched.
-
-### 4.6 Item Return
-
-Only an approved ownership claim proceeds to contacting the finder (UC10), physical item handover, and return confirmation (UC11).
-
-## 5. Rendering
-
-This document uses Mermaid syntax, which GitHub supports natively. The activity diagram should appear automatically when the Markdown file is opened in the repository.
-
-## 6. Scope
-
-This is an initial activity model of the main Find My workflows. It is intended to clarify system behavior and decisions before implementation. The diagram should be reviewed against the team's final Use Case Diagram and requirements.
+This activity diagram covers all 19 functional use cases (`UC1`–`UC19`) mapped to `FR-01` through `FR-19` and `User Story 1` through `User Story 18` in `SRS.md`.
