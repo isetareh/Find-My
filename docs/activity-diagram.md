@@ -2,20 +2,20 @@
 
 ## 1. Purpose
 
-This document describes the main operational workflows for **Find My**, a university lost-and-found system. It is aligned with the functional requirements (`FR-01` through `FR-19`), user stories (`User Story 1` through `User Story 18`), and the Use Case Diagram (`UC1` through `UC19`) defined in `SRS.md`.
+This document describes the main operational workflows for **Find My**, a university lost-and-found system. It is aligned with the functional requirements (`FR-01` through `FR-19`), user stories (`User Story 1` through `User Story 18`), and the Use Case Diagram (`UC1` through `UC19`) defined in the system specifications.
 
-The diagram models the end-to-end activities and decision points for reporting lost and found items, optionally hiding private item details, browsing and searching public listings, managing reports, verifying ownership claims when necessary, and marking items as returned.
+The diagram models the end-to-end activities and decision points for reporting lost and found items, hiding private item details, browsing and searching public listings, managing reports, verifying ownership claims, and marking items as returned.
 
 ## 2. Actors and Swimlanes
 
-- **Student** — initiates report creation (`UC1`, `UC2`, `UC3`), optionally selectsfound-item details to keep private (`UC16`), browses/searches/filters listings (`UC4`, `UC5`, `UC7`), views public report details (`UC6`), manages their own reports (`UC8`, `UC9`), checks status or receives updates (`UC12`, `UC13`), flags suspicious listings (`UC14`), submits ownership claims with identifying details (`UC17`), contacts the finder (`UC10`), and marks an item as returned (`UC11`).
+- **Student** — initiates report creation (`UC1`, `UC2`, `UC3`), optionally selects found-item details to keep private (`UC16`), browses/searches/filters listings (`UC4`, `UC5`, `UC7`), views public report details (`UC6`), manages their own reports (`UC8`, `UC9`), checks status or receives updates (`UC12`, `UC13`), flags suspicious listings (`UC14`), submits ownership claims with identifying details (`UC17`), contacts the finder (`UC10`), and marks an item as returned (`UC11`).
 - **Find My System** — stores reports while keeping public and private details separated, serves public listings, and dispatches report updates (`UC13`) when notifications are enabled without exposing private details.
 - **Authorized Ownership Reviewer** — reviews ownership claims when necessary (`UC18`) and accesses private item details for verification (`UC19`), as permitted by `FR-18` and `FR-19`.
 - **University Staff** — reviews and manages reports (`UC15`), may act as an authorized reviewer for ownership claims (`UC18`), and marks reports as returned (`UC11`) once the item is given back to its owner.
 
 ## 3. Activity Diagram (PlantUML)
 
-The following code can be rendered directly by GitHub-compatible PlantUML tooling or pasted into a PlantUML renderer.
+The following PlantUML code defines the workflow, utilizing swimlanes to map actions to their respective actors.
 
 ```plantuml
 @startuml
@@ -43,7 +43,7 @@ case ( Create a Report )
 
   |Find My System|
   :Save Report & Separate Public Listing\nfrom Private Item Details;
-  if (Notifications enabled for matching/status updates?) then (Yes)
+  if (Notifications enabled?) then (Yes)
     |Student|
     :Receive Report Updates (UC13);
   else (No)
@@ -75,7 +75,7 @@ case ( Browse, Search & Claim an Item )
 
   :View Public Report Details (UC6);
 
-  if (Contains incorrect or suspicious information?) then (Yes)
+  if (Contains suspicious information?) then (Yes)
     :Report a Suspicious Listing (UC14);
     |University Staff|
     :Review and Manage Reports (UC15);
@@ -132,9 +132,9 @@ endswitch
 @enduml
 ```
 
-## 4. Activity Diagram (Mermaid — Native GitHub Preview)
+## 4. Activity Diagram (Mermaid)
 
-GitHub natively renders Mermaid diagrams inside Markdown files. This diagram mirrors the PlantUML workflow above:
+The following flowchart represents the system workflow in Mermaid format.
 
 ```mermaid
 flowchart TD
@@ -208,22 +208,22 @@ flowchart TD
 
 ## 5. Activity Step Summary
 
-| Activity Node | Actor / Swimlane | Description | Related Use Case & Requirement |
+| Activity Node | Actor / Swimlane | Description | Related Use Case |
 |---|---|---|---|
-| Report a Lost / Found Item | Student | Initiates creation of a lost or found report. | `UC1` (`FR-01`; US 1), `UC2` (`FR-02`; US 2) |
-| Enter Item Details | Student | Mandatory step (`<<include>>`) capturing item name, color, description, location, and date. | `UC3` (`FR-03`; US 3) |
-| Select Details to Keep Private | Student | Optional step (`<<extend>>` on `UC2`) hiding sensitive attributes from public listings. | `UC16` (`FR-16`; US 16) |
-| Browse / Search / Filter Reports | Student | Explores public reports via recent listings, keyword search, or category/date filters. | `UC4` (`FR-04`; US 7), `UC5` (`FR-05`; US 4), `UC7` (`FR-07`; US 5) |
-| View Public Report Details | Student | Displays only the public fields of a report. | `UC6` (`FR-06`; US 6) |
-| Report a Suspicious Listing | Student | Flags incorrect or suspicious report content for staff review. | `UC14` (`FR-14`; US 14) |
-| Review and Manage Reports | University Staff | Staff inspect, moderate, and manage submitted reports. | `UC15` (`FR-15`; US 15) |
-| Edit / Delete Own Report | Student | Modifies or removes a report created by the user. | `UC8` (`FR-08`; US 8), `UC9` (`FR-09`; US 9) |
-| Submit Ownership Claim | Student | Submits a claim along with identifying details to establish ownership. | `UC17` (`FR-17`; US 17) |
-| Review Ownership Claim | Authorized Ownership Reviewer / Staff | Reviews the submitted claim when necessary before an item is returned. | `UC18` (`FR-18`; US 18) |
-| Access Private Item Details | Authorized Ownership Reviewer | Mandatory sub-step (`<<include>>` of `UC18`) accessing hidden details to verify a claim. | `UC19` (`FR-19`; US 16–18) |
-| Check Status / Receive Updates | Student / System | Tracks report progress and delivers notifications without exposing private details. | `UC12` (`FR-12`; US 12), `UC13` (`FR-13`; US 13) |
-| Contact the Item Finder | Student | Connects with the finder to arrange the physical return of the item. | `UC10` (`FR-10`; US 10) |
-| Mark Item as Returned | Student / University Staff | Updates the report state to returned only after the item has physically been given back. | `UC11` (`FR-11`; US 11) |
+| Report a Lost / Found Item | Student | Initiates creation of a lost or found report. | `UC1`, `UC2` |
+| Enter Item Details | Student | Mandatory step (`<<include>>`) capturing item name, color, description, location, and date. | `UC3` |
+| Select Details to Keep Private | Student | Optional step (`<<extend>>` on `UC2`) hiding sensitive attributes from public listings. | `UC16` |
+| Browse / Search / Filter Reports | Student | Explores public reports via recent listings, keyword search, or filters. | `UC4`, `UC5`, `UC7` |
+| View Public Report Details | Student | Displays only the public fields of a report. | `UC6` |
+| Report a Suspicious Listing | Student | Flags incorrect or suspicious report content for staff review. | `UC14` |
+| Review and Manage Reports | University Staff | Staff inspect, moderate, and manage submitted reports. | `UC15` |
+| Edit / Delete Own Report | Student | Modifies or removes a report created by the user. | `UC8`, `UC9` |
+| Submit Ownership Claim | Student | Submits a claim along with identifying details to establish ownership. | `UC17` |
+| Review Ownership Claim | Authorized Ownership Reviewer | Reviews the submitted claim when necessary before an item is returned. | `UC18` |
+| Access Private Item Details | Authorized Ownership Reviewer | Mandatory sub-step (`<<include>>` of `UC18`) accessing hidden details to verify a claim. | `UC19` |
+| Check Status / Receive Updates | Student / System | Tracks report progress and delivers notifications without exposing private details. | `UC12`, `UC13` |
+| Contact the Item Finder | Student | Connects with the finder to arrange the physical return of the item. | `UC10` |
+| Mark Item as Returned | Student / University Staff | Updates the report state to returned only after the item has physically been given back. | `UC11` |
 
 ## 6. Relationship and Control-Flow Notes
 
@@ -242,4 +242,4 @@ flowchart TD
 
 ## 8. Traceability Note
 
-This activity diagram covers all 19 functional use cases (`UC1`–`UC19`) mapped to `FR-01` through `FR-19` and `User Story 1` through `User Story 18` in `SRS.md`.
+This activity diagram covers all 19 functional use cases (`UC1`–`UC19`) mapped to `FR-01` through `FR-19` and `User Story 1` through `User Story 18` in the system requirements specification.
