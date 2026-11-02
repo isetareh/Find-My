@@ -42,7 +42,7 @@ Ownership verification and physical handover happen in person, outside the appli
 - **FR9:** The system shall allow authenticated Staff to view and search all non-deleted listings (`is_deleted = false`), including both `ACTIVE` and `RETURNED` items[span_114](start_span)[span_114](end_span)[span_115](start_span)[span_115](end_span).
 - **FR10:** The system shall allow authenticated Staff to mark an `ACTIVE` listing as returned by updating `status` to `RETURNED`[span_116](start_span)[span_116](end_span).
 - **FR11:** The system shall allow authenticated Staff to remove inappropriate listings using Soft Delete by setting `is_deleted = true` (retaining the database record)[span_117](start_span)[span_117](end_span).
-- **FR12:** The system shall restrict Staff-only operations to `STAFF` accounts and reject unauthorized requests with HTTP 401/403 errors[span_118](start_span)[span_118](end_span).
+  **FR12:** The system shall restrict Staff-only operations to `STAFF` accounts. Unauthenticated requests to Staff-only operations shall receive HTTP 401 Unauthorized, while authenticated users without the `STAFF` role shall receive HTTP 403 Forbidden.
 
 ## 5. Non-Functional Requirements
 
