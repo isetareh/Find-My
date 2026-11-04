@@ -19,10 +19,10 @@ Ownership verification and physical handover happen in person, outside the appli
 
 ## 3. Users, Permissions, and Account Creation
 
-| Role        | Permitted Actions                                                                                                                                                                                                                                                                  | Prohibited Actions                                                                                                                                                             |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Student** | Log in, create lost/found reports, browse/search active (`status = ACTIVE`, `is_deleted = false`) listings, view active item details and reporter email.   | Cannot view `RETURNED` or soft-deleted (`is_deleted = true`) listings; cannot manage listings. |
-| **Staff**   | Log in, view and search all non-deleted (`is_deleted = false`) listings (both `ACTIVE` and `RETURNED`), view details, mark active items as `RETURNED`, soft-delete listings (`is_deleted = true`). | Cannot create student lost or found reports.                                                                                           |
+| Role | Permitted Actions | Prohibited Actions |
+|---|---|---|
+| **Student** | Log in, create lost/found reports, browse/search active (`status = ACTIVE`, `is_deleted = false`) listings, view active item details and reporter email. | Cannot view `RETURNED` or soft-deleted (`is_deleted = true`) listings; cannot manage listings. |
+| **Staff** | Log in, view and search all non-deleted (`is_deleted = false`) listings (both `ACTIVE` and `RETURNED`), view details, mark active items as `RETURNED`, soft-delete listings (`is_deleted = true`). | Cannot create student lost or found reports. |
 
 **Account Creation Policy:**
 
@@ -31,18 +31,18 @@ Ownership verification and physical handover happen in person, outside the appli
 
 ## 4. Functional Requirements
 
-- **FR1:** The system shall authenticate Students and Staff using their `university_email` and `password`, automatically detecting their role (`STUDENT` or `STAFF`) from their `User` record[span_100](start_span)[span_100](end_span)[span_101](start_span)[span_101](end_span).
-- **FR2:** The system shall allow authenticated Students to submit a lost item report (`type = LOST`) containing required fields (`title`, `description`, `category`, `location`, `item_date`) and an optional `image`[span_102](start_span)[span_102](end_span)[span_103](start_span)[span_103](end_span).
-- **FR3:** The system shall allow authenticated Students to submit a found item report (`type = FOUND`) containing required fields (`title`, `description`, `category`, `location`, `item_date`) and an optional `image`[span_104](start_span)[span_104](end_span)[span_105](start_span)[span_105](end_span).
-- **FR4:** The system shall validate all report inputs and save valid reports with `status = ACTIVE`, `is_deleted = false`, and `created_at` set to the current server timestamp; if any required field is missing or invalid, the system shall reject the request and display a validation error without saving[span_106](start_span)[span_106](end_span)[span_107](start_span)[span_107](end_span)[span_108](start_span)[span_108](end_span).
-- **FR5:** The system shall allow authenticated Students to browse active listings (`status = ACTIVE` and `is_deleted = false`)[span_109](start_span)[span_109](end_span).
-- **FR6:** The system shall provide case-insensitive text search across the item `title` and `description` fields for active, non-deleted listings[span_110](start_span)[span_110](end_span).
-- **FR7:** The system shall allow authenticated Students to view item details only for listings where `status = ACTIVE` and `is_deleted = false`[span_111](start_span)[span_111](end_span).
-- **FR8:** The system shall display the reporter’s `university_email` on the item details page by reading it from the associated `User` record via `reporter_id` (without duplicating contact fields in the `Item` table)[span_112](start_span)[span_112](end_span)[span_113](start_span)[span_113](end_span).
-- **FR9:** The system shall allow authenticated Staff to view and search all non-deleted listings (`is_deleted = false`), including both `ACTIVE` and `RETURNED` items[span_114](start_span)[span_114](end_span)[span_115](start_span)[span_115](end_span).
-- **FR10:** The system shall allow authenticated Staff to mark an `ACTIVE` listing as returned by updating `status` to `RETURNED`[span_116](start_span)[span_116](end_span).
-- **FR11:** The system shall allow authenticated Staff to remove inappropriate listings using Soft Delete by setting `is_deleted = true` (retaining the database record)[span_117](start_span)[span_117](end_span).
-  **FR12:** The system shall restrict Staff-only operations to `STAFF` accounts. Unauthenticated requests to Staff-only operations shall receive HTTP 401 Unauthorized, while authenticated users without the `STAFF` role shall receive HTTP 403 Forbidden.
+- **FR1:** The system shall authenticate Students and Staff using their `university_email` and `password`, automatically detecting their role (`STUDENT` or `STAFF`) from their `User` record.
+- **FR2:** The system shall allow authenticated Students to submit a lost item report (`type = LOST`) containing required fields (`title`, `description`, `category`, `location`, `item_date`) and an optional `image`.
+- **FR3:** The system shall allow authenticated Students to submit a found item report (`type = FOUND`) containing required fields (`title`, `description`, `category`, `location`, `item_date`) and an optional `image`.
+- **FR4:** The system shall validate all report inputs and save valid reports with `status = ACTIVE`, `is_deleted = false`, and `created_at` set to the current server timestamp; if any required field is missing or invalid, the system shall reject the request and display a validation error without saving.
+- **FR5:** The system shall allow authenticated Students to browse active listings (`status = ACTIVE` and `is_deleted = false`).
+- **FR6:** The system shall provide case-insensitive text search across the item `title` and `description` fields for active, non-deleted listings.
+- **FR7:** The system shall allow authenticated Students to view item details only for listings where `status = ACTIVE` and `is_deleted = false`.
+- **FR8:** The system shall display the reporter’s `university_email` on the item details page by reading it from the associated `User` record via `reporter_id` (without duplicating contact fields in the `Item` table).
+- **FR9:** The system shall allow authenticated Staff to view and search all non-deleted listings (`is_deleted = false`), including both `ACTIVE` and `RETURNED` items.
+- **FR10:** The system shall allow authenticated Staff to mark an `ACTIVE` listing as returned by updating `status` to `RETURNED`.
+- **FR11:** The system shall allow authenticated Staff to remove inappropriate listings using Soft Delete by setting `is_deleted = true` (retaining the database record).
+- **FR12:** The system shall restrict Staff-only operations to `STAFF` accounts. Unauthenticated requests to Staff-only operations shall receive HTTP 401 Unauthorized, while authenticated users without the `STAFF` role shall receive HTTP 403 Forbidden.
 
 ## 5. Non-Functional Requirements
 
@@ -58,30 +58,30 @@ A single `Item` entity is used for both lost and found reports. Contact informat
 
 ### User Entity
 
-| Attribute          | Type / Constraints         | Required? | Description                                                                                                                     |
-| ------------------ | -------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `id`               | BIGINT, PK, Auto-increment | Required  | Unique user identifier                                                                                                          |
-| `name`             | VARCHAR(100)               | Required  | User's full name                                                                                                                |
-| `university_email` | VARCHAR(255), UNIQUE       | Required  | University email used for login and item contact                                      |
-| `password`         | VARCHAR(255)               | Required  | Securely hashed password                                                              |
-| `role`             | ENUM(`STUDENT`, `STAFF`)   | Required  | User role detected automatically upon login |
+| Attribute | Type / Constraints | Required? | Description |
+|---|---|---|---|
+| `id` | BIGINT, PK, Auto-increment | Required | Unique user identifier |
+| `name` | VARCHAR(100) | Required | User's full name |
+| `university_email` | VARCHAR(255), UNIQUE | Required | University email used for login and item contact |
+| `password` | VARCHAR(255) | Required | Securely hashed password |
+| `role` | ENUM(`STUDENT`, `STAFF`) | Required | User role detected automatically upon login |
 
 ### Item Entity
 
-| Attribute     | Type / Constraints         | Required? | Description                                                                                                          |
-| ------------- | -------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------- |
-| `id`          | BIGINT, PK, Auto-increment | Required  | Unique item identifier                                                                                               |
-| `title`       | VARCHAR(100), 3–100 chars  | Required  | Item title                                                                 |
-| `description` | VARCHAR(500), 1–500 chars  | Required  | Item description                                                           |
-| `category`    | VARCHAR(50)                | Required  | Fixed list: `Electronics`, `Documents`, `Clothing`, `Accessories`, `Other` |
-| `type`        | ENUM(`LOST`, `FOUND`)      | Required  | Distinguishes lost vs. found reports                                                                                 |
-| `location`    | VARCHAR(100), 2–100 chars  | Required  | Campus location where item was lost or found                               |
-| `item_date`   | DATE ($\le$ current date)  | Required  | Date the item was lost or found (distinct from `created_at`)               |
-| `image`       | VARCHAR(255)               | Optional  | Uploaded JPG/PNG image path (max 5 MB)                                     |
-| `reporter_id` | BIGINT, FK -> `User.id`    | Required  | Reference to the Student who created the report                            |
-| `status`      | ENUM(`ACTIVE`, `RETURNED`) | Required  | Defaults to `ACTIVE` when created                                          |
-| `is_deleted`  | BOOLEAN                    | Required  | Soft-delete flag; defaults to `false`                                      |
-| `created_at`  | TIMESTAMP                  | Required  | Automatic timestamp when the report was created in the system              |
+| Attribute | Type / Constraints | Required? | Description |
+|---|---|---|---|
+| `id` | BIGINT, PK, Auto-increment | Required | Unique item identifier |
+| `title` | VARCHAR(100), 3–100 chars | Required | Item title |
+| `description` | VARCHAR(500), 1–500 chars | Required | Item description |
+| `category` | VARCHAR(50) | Required | Fixed list: `Electronics`, `Documents`, `Clothing`, `Accessories`, `Other` |
+| `type` | ENUM(`LOST`, `FOUND`) | Required | Distinguishes lost vs. found reports |
+| `location` | VARCHAR(100), 2–100 chars | Required | Campus location where item was lost or found |
+| `item_date` | DATE (≤ current date) | Required | Date the item was lost or found (distinct from `created_at`) |
+| `image` | VARCHAR(255) | Optional | Uploaded JPG/PNG image path (max 5 MB) |
+| `reporter_id` | BIGINT, FK → `User.id` | Required | Reference to the Student who created the report |
+| `status` | ENUM(`ACTIVE`, `RETURNED`) | Required | Defaults to `ACTIVE` when created |
+| `is_deleted` | BOOLEAN | Required | Soft-delete flag; defaults to `false` |
+| `created_at` | TIMESTAMP | Required | Automatic timestamp when the report was created in the system |
 
 ## 7. Business Rules & Listing Visibility Matrix
 
@@ -92,11 +92,11 @@ A single `Item` entity is used for both lost and found reports. Contact informat
 - **BR5 (Soft Deletion):** Removing a listing performs a Soft Delete (`is_deleted = true`). Records are never permanently deleted (`DELETE FROM`) via the application UI.
 - **BR6 (Listing Visibility by Status and Role):**
 
-| Item State (`status` & `is_deleted`)      | Student Browse & Search                                                                    | Student Item Details View                                                                                 | Staff Management View                                                                       | Database Storage                                            |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `status = ACTIVE`, `is_deleted = false`   | Visible                                          | Viewable                                                        | Visible | Stored                                                      |
-| `status = RETURNED`, `is_deleted = false` | Hidden | Blocked (Error shown) | Visible | Stored                                                      |
-| `is_deleted = true` (Soft-Deleted)        | Hidden | Blocked (Error shown) | Hidden  | Stored (Archived) |
+| Item State (`status` & `is_deleted`) | Student Browse & Search | Student Item Details View | Staff Management View | Database Storage |
+|---|---|---|---|---|
+| `status = ACTIVE`, `is_deleted = false` | Visible | Viewable | Visible | Stored |
+| `status = RETURNED`, `is_deleted = false` | Hidden | Blocked (Error shown) | Visible | Stored |
+| `is_deleted = true` (Soft-Deleted) | Hidden | Blocked (Error shown) | Hidden | Stored (Archived) |
 
 - **BR7 (Offline Verification):** Ownership verification and physical handover happen in person outside the application.
 
