@@ -1,0 +1,129 @@
+
+@startuml
+title Find My - Class Diagram
+
+skinparam classAttributeIconSize 0
+
+' =========================
+' Entities
+' =========================
+
+class User {
+  - id: Long
+  - name: String
+  - universityEmail: String
+  - passwordHash: String
+  - role: Role
+}
+
+class Listing {
+  - id: Long
+  - title: String
+  - description: String
+  - category: Category
+  - type: ListingType
+  - location: String
+  - itemDate: Date
+  - status: ListingStatus
+  - isDeleted: Boolean
+  - createdAt: DateTime
+
+  + markAsReturned(): void
+  + softDelete(): void
+}
+
+' =========================
+' Services
+' =========================
+
+class AuthService {
+  + login(email: String, password: String): User
+  - validateCredentials(email: String, password: String): Boolean
+  + getUserRole(user: User): Role
+}
+
+class ListingService {
+  + createListing(title: String, description: String, category: Category, type: ListingType, location: String, itemDate: Date, student: User): Listing
+  + getActiveListings(): List<Listing>
+  + searchListings(query: String): List<Listing>
+  + getListingDetails(id: Long): Listing
+  + markOwnListingAsReturned(id: Long, student: User): void
+}
+
+class StaffService {
+  + getAllNotDeletedListings(): List<Listing>
+  + searchNotDeletedListings(query: String): List<Listing>
+  + markListingAsReturned(id: Long): void
+  + softDeleteListing(id: Long): void
+}
+
+' =========================
+' Repositories
+' =========================
+
+class UserRepository {
+  + findById(id: Long): User
+  + findByEmail(email: String): User
+  + save(user: User): User
+}
+
+class ListingRepository {
+  + save(listing: Listing): Listing
+  + findById(id: Long): Listing
+  + findAllActive(): List<Listing>
+  + searchActive(query: String): List<Listing>
+  + findAllNotDeleted(): List<Listing>
+  + searchNotDeleted(query: String): List<Listing>
+}
+
+' =========================
+' Enumerations
+' =========================
+
+enum Role {
+  STUDENT
+  STAFF
+}
+
+enum ListingType {
+  LOST
+  FOUND
+}
+
+enum ListingStatus {
+  ACTIVE
+  RETURNED
+}
+
+enum Category {
+  ELECTRONICS
+  DOCUMENTS
+  CLOTHING
+  ACCESSORIES
+  OTHER
+}
+
+' =========================
+' Associations
+' =========================
+
+User "1" -- "0..*" Listing : reports
+
+' =========================
+' Dependencies
+' =========================
+
+AuthService ..> UserRepository
+AuthService ..> User
+
+ListingService ..> ListingRepository
+ListingService ..> User
+ListingService ..> Listing
+
+StaffService ..> ListingRepository
+StaffService ..> Listing
+
+UserRepository ..> User
+ListingRepository ..> Listing
+
+@enduml
