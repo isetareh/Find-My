@@ -1,153 +1,263 @@
-
 # Find My — Software Requirements Specification (SRS)
 
 ## 1. Purpose
 
-Find My is a university lost-and-found web application built for Khatam University. It enables Students to report lost and found items, browse and search active listings, and contact reporters via their university email address, while allowing Staff members to manage listings.
+Find My is a university-based Lost and Found Management System designed to help Students report lost and found items, browse and search active listings, view listing details, and contact reporters through their university email addresses.
+
+The system also allows Staff members to review and manage listings, mark items as returned, and remove inappropriate or invalid listings.
 
 ## 2. Scope
 
-The system supports seven core workflows:
+The system supports the following core workflows:
 
-- Role-based login for pre-registered Student and Staff accounts, with automatic role detection.
+- Login for pre-registered Student and Staff accounts, with automatic role detection.
 - Lost listing creation by Students.
 - Found listing creation by Students.
-- Browsing and keyword-searching active listings across titles and descriptions.
+- Browsing and keyword-searching active listings.
 - Viewing listing details and the reporter's university email.
 - Student management of their own active listings by marking them as `RETURNED`.
-- Staff listing management (marking any active listing as `RETURNED` and soft-deleting via `is_deleted`).
+- Staff listing management, including marking any active listing as `RETURNED` and soft-deleting inappropriate or invalid listings.
 
-Ownership verification and physical handover happen in person, outside the application.
+Physical item handover and ownership verification take place outside the application.
 
-## 3. Users, Permissions, and Account Creation
+## 3. Users and Permissions
 
 | Role | Permitted Actions | Prohibited Actions |
 |---|---|---|
-| **Student** | Log in, create lost/found listings, browse/search active (`status = ACTIVE`, `is_deleted = false`) listings, view active listing details and reporter email, mark their own active listings as `RETURNED`. | Cannot view `RETURNED` or soft-deleted (`is_deleted = true`) listings; cannot change the status of another Student's listing or soft-delete listings. |
-| **Staff** | Log in, view and search all non-deleted (`is_deleted = false`) listings (both `ACTIVE` and `RETURNED`), view details, mark any active listing as `RETURNED`, soft-delete listings (`is_deleted = true`). | Cannot create Student lost or found listings. |
+| **Student** | Log in, create LOST and FOUND listings, browse and search active listings, view active listing details and reporter email, mark their own active listings as `RETURNED`. | Cannot view returned or soft-deleted listings, change another Student's listing status, or soft-delete listings. |
+| **Staff** | Log in, view and search all non-deleted listings (both `ACTIVE` and `RETURNED`), mark any active listing as `RETURNED`, and soft-delete inappropriate or invalid listings. | Cannot create LOST or FOUND listings. |
 
-**Account Creation Policy:**
+**Account and Role Policy:**
 
-- **Student Accounts:** Pre-seeded or provisioned in the database via the university's official student roster. Students authenticate using their issued credentials and cannot alter their assigned role.
-- **Staff Accounts:** Created and assigned directly in the database by a system administrator. Students cannot register themselves as Staff or elevate their own privileges.
+- Only registered university accounts can log in.
+- Each account has a role stored in its associated `User` record.
+- The system automatically detects the user's role (`STUDENT` or `STAFF`) after successful authentication.
+- Users cannot change their assigned role through the application.
 
 ## 4. Functional Requirements
 
-- **FR1:** The system shall authenticate Students and Staff using their `university_email` and `password`, automatically detecting their role (`STUDENT` or `STAFF`) from their `User` record.
+### 4.1 Authentication and Access Control
 
-- **FR2:** The system shall allow authenticated Students to submit a lost listing (`type = LOST`) containing the required fields (`title`, `description`, `category`, `location`, `item_date`).
+- **FR1 — User Authentication:** The system shall authenticate Students and Staff using their `university_email` and `password`. The user's role (`STUDENT` or `STAFF`) shall be automatically detected from their `User` record.
 
-- **FR3:** The system shall allow authenticated Students to submit a found listing (`type = FOUND`) containing the required fields (`title`, `description`, `category`, `location`, `item_date`).
+- **FR2 — Login Input Validation:** The system shall reject login submissions when the email or password is empty or contains only whitespace.
 
-- **FR4:** The system shall validate all listing inputs and save valid listings with `status = ACTIVE`, `is_deleted = false`, and `created_at` set to the current server timestamp; if any required field is missing or invalid, the system shall reject the request and display a validation error without saving.
+- **FR3 — Invalid Credentials:** The system shall reject login attempts with an unregistered email or incorrect password. The error message shall not reveal which credential was incorrect.
 
-- **FR5:** The system shall allow authenticated Students to browse active listings (`status = ACTIVE` and `is_deleted = false`).
+- **FR4 — Email Matching:** Login email matching shall be case-insensitive and shall ignore leading and trailing whitespace.
 
-- **FR6:** The system shall provide case-insensitive text search across the listing `title` and `description` fields for active, non-deleted listings.
+- **FR5 — Protected Access:** The system shall prevent unauthenticated users from accessing protected pages and operations. Unauthenticated users attempting to access protected pages shall be redirected to the login view.
 
-- **FR7:** The system shall allow authenticated Students to view listing details only for listings where `status = ACTIVE` and `is_deleted = false`.
+### 4.2 Listing Creation
 
-- **FR8:** The system shall display the reporter's `university_email` on the listing details page by reading it from the associated `User` record via `reporter_id` (without duplicating contact fields in the `Listing` table).
+- **FR6 — Report Lost Item:** The system shall allow authenticated Students to create lost item listings (`type = LOST`) by providing the required fields: `title`, `description`, `category`, `location`, and `item_date`.
 
-- **FR9:** The system shall allow authenticated Staff to view and search all non-deleted listings (`is_deleted = false`), including both `ACTIVE` and `RETURNED` listings.
+- **FR7 — Report Found Item:** The system shall allow authenticated Students to create found item listings (`type = FOUND`) by providing the required fields: `title`, `description`, `category`, `location`, and `item_date`.
 
-- **FR10:** The system shall allow authenticated Staff to mark an `ACTIVE` listing as returned by updating `status` to `RETURNED`.
+- **FR8 — Listing Validation and Initialization:** The system shall validate all required listing fields according to the following rules:
 
-- **FR11:** The system shall allow authenticated Staff to remove inappropriate listings using Soft Delete by setting `is_deleted = true` (retaining the database record).
+  - `title`: Required; 3 to 100 characters after trimming leading and trailing whitespace.
+  - `description`: Required; 1 to 500 characters after trimming leading and trailing whitespace.
+  - `category`: Required; must be one of the predefined categories:
+    `Electronics`, `Documents`, `Clothing`, `Accessories`, or `Other`.
+  - `location`: Required; 2 to 100 characters after trimming leading and trailing whitespace.
+  - `item_date`: Required; must be a valid calendar date on or before the current date.
 
-- **FR12:** The system shall restrict Staff-only operations to `STAFF` accounts. Unauthenticated requests to Staff-only operations shall receive HTTP 401 Unauthorized, while authenticated users without the `STAFF` role shall receive HTTP 403 Forbidden.
+  If any required field is missing or invalid, the system shall reject the submission, display a validation error, and not save the listing.
 
-- **FR13:** The system shall allow an authenticated Student to change the status of their own `ACTIVE` listing to `RETURNED`. A Student attempting to change another Student's listing shall receive HTTP 403 Forbidden. Attempts to update a non-existent, already returned, or soft-deleted listing shall be rejected; non-existent and soft-deleted listings shall return HTTP 404 Not Found.
+  A valid listing shall be saved with:
+
+  - `status = ACTIVE`
+  - `is_deleted = false`
+  - `created_at` set to the current timestamp
+  - `reporter_id` linked to the authenticated Student
+
+- **FR9 — Immediate Listing Visibility:** After successful creation, the new listing shall immediately appear in the Student's active listings.
+
+- **FR10 — Listing Creation Authorization:** Only authenticated Students shall be allowed to create LOST and FOUND listings. Unauthenticated users and Staff accounts shall not be allowed to create listings.
+
+### 4.3 Student Browsing and Searching
+
+- **FR11 — Browse Active Listings:** The system shall allow authenticated Students to browse all listings where `status = ACTIVE` and `is_deleted = false`, including both `LOST` and `FOUND` listings.
+
+- **FR12 — Keyword Search:** The system shall provide keyword search across the `title` and `description` fields of active, non-deleted listings.
+
+- **FR13 — Search Normalization:** Search matching shall be case-insensitive and shall ignore leading and trailing whitespace in the search query.
+
+- **FR14 — Empty Search Query:** When a Student submits an empty or whitespace-only search query, the system shall display all active, non-deleted listings.
+
+- **FR15 — No Matching Results:** When no active listings match the search query, the system shall display the following message:
+
+  `No matching items found.`
+
+- **FR16 — Hidden Listings:** Listings with `status = RETURNED` or `is_deleted = true` shall never appear in Student browsing or search results.
+
+### 4.4 Listing Details
+
+- **FR17 — View Listing Details:** The system shall allow authenticated Students to view the details of an active, non-deleted listing.
+
+  The details shall include:
+
+  - `title`
+  - `description`
+  - `category`
+  - `type` (`LOST` or `FOUND`)
+  - `location`
+  - `item_date`
+
+- **FR18 — Display Reporter Email:** The system shall display the reporter's `university_email` on the listing details page. The email shall be retrieved from the associated `User` record through `reporter_id`.
+
+- **FR19 — Protect Private Account Data:** The system shall never expose the reporter's password hash or other private account fields in listing details or user-facing responses.
+
+- **FR20 — Unavailable Listing:** If a Student requests a listing that does not exist, has `is_deleted = true`, or has `status = RETURNED`, the system shall prevent access and display the following error message:
+
+  `Listing not found or no longer available`
+
+### 4.5 Staff Listing Management
+
+- **FR21 — View and Search Listings:** The system shall allow authenticated Staff members to view and search all non-deleted listings (`is_deleted = false`), including both `ACTIVE` and `RETURNED` listings.
+
+- **FR22 — Mark Listing as Returned:** The system shall allow authenticated Staff members to change the status of any active listing from `ACTIVE` to `RETURNED`.
+
+- **FR23 — Already Returned Listing:** If Staff attempt to mark an already returned listing as returned, the system shall reject the operation and display an informative status error.
+
+- **FR24 — Soft Delete Listing:** The system shall allow authenticated Staff members to remove inappropriate or invalid listings using Soft Delete. This operation shall set `is_deleted = true` without permanently deleting the database record.
+
+- **FR25 — Soft-Deleted Listing Visibility:** Soft-deleted listings shall be hidden from all Student and Staff views and search results, while their records remain stored in the database.
+
+- **FR26 — Invalid Management Requests:** Attempts to update the status of or soft-delete a non-existent listing or a listing that has already been soft-deleted shall be rejected with HTTP `404 Not Found`.
+
+### 4.6 Student Listing Management
+
+- **FR27 — Mark Own Listing as Returned:** The system shall allow an authenticated Student to change the status of their own active listing from `ACTIVE` to `RETURNED`.
+
+- **FR28 — Listing Ownership Restriction:** A Student attempting to change the status of another Student's listing shall be rejected with HTTP `403 Forbidden`.
+
+- **FR29 — Already Returned Listing:** If a Student attempts to mark an already returned listing as returned, the system shall reject the operation and display an informative status error.
+
+- **FR30 — Invalid Student Status Update:** Attempts to change the status of a non-existent or soft-deleted listing shall be rejected with HTTP `404 Not Found`.
+
+- **FR31 — Immediate Removal from Student Results:** After a listing is marked as `RETURNED`, it shall no longer appear in Student browsing or search results.
+
+### 4.7 Authorization Rules
+
+- **FR32 — Staff-Only Operations:** The system shall restrict Staff-only management operations to authenticated accounts with the `STAFF` role.
+
+- **FR33 — Unauthorized Staff Operations:** An unauthenticated user attempting to perform Staff-only management operations shall receive HTTP `401 Unauthorized`.
+
+- **FR34 — Student Access to Staff Operations:** An authenticated Student attempting to perform Staff-only management operations shall receive HTTP `403 Forbidden`.
+
+- **FR35 — Student Interface Restrictions:** Student views shall not display Staff management controls. Direct requests by Students to Staff-only management operations shall be rejected.
 
 ## 5. Non-Functional Requirements
 
-- **NFR1 — Security:** Passwords must be stored using cryptographic hashing (BCrypt). Password hashes and private credentials must never be exposed in API responses or UI views.
+- **NFR1 — Security:** User passwords shall be stored securely as password hashes. Password hashes and private credentials shall never be exposed in API responses or user interface views. The specific password-hashing technology shall be selected during implementation.
 
-- **NFR2 — Access Control:** Role permissions (`STUDENT` vs. `STAFF`) must be enforced on the backend for every protected endpoint.
+- **NFR2 — Access Control:** Role-based permissions (`STUDENT` and `STAFF`) and listing ownership restrictions shall be enforced on the backend for every protected operation.
 
-- **NFR3 — Usability:** Users must be able to submit a listing or execute a search in 3 or fewer clicks after login.
+- **NFR3 — Usability:** Users should be able to submit a listing or execute a search in three or fewer clicks after login.
 
-- **NFR4 — Reliability:** All User and Listing records must be stored persistently in a relational database. The specific database technology shall be determined during implementation.
+- **NFR4 — Reliability:** User and Listing records shall be stored persistently. The specific database technology shall be determined during implementation.
 
-- **NFR5 — Input Validation:** If a user submits incomplete, empty, out-of-range, or invalid data (such as a future `item_date`), the backend must reject the request, prevent database persistence, and return a clear error message.
+- **NFR5 — Input Validation:** The system shall validate user input on the backend. Incomplete, empty, out-of-range, or invalid data shall be rejected, and invalid submissions shall not be saved.
 
 ## 6. Data Requirements
 
-A single `Listing` entity is used for both lost and found listings. Contact information is not stored directly on the `Listing` entity; it is resolved dynamically through `reporter_id`.
+The system uses two main entities: `User` and `Listing`.
 
-### User Entity
+A single `Listing` entity is used for both lost and found listings. Contact information is not stored directly in the `Listing` entity; it is retrieved through the relationship between `Listing.reporter_id` and `User.id`.
+
+### 6.1 User Entity
 
 | Attribute | Type / Constraints | Required? | Description |
 |---|---|---|---|
 | `id` | Integer, Primary Key | Required | Unique user identifier |
 | `name` | String, maximum 100 characters | Required | User's full name |
 | `university_email` | String, Unique, maximum 255 characters | Required | University email used for login and listing contact |
-| `password` | String, maximum 255 characters | Required | Securely hashed password |
+| `password` | String, stores a password hash | Required | Securely stored password hash |
 | `role` | `STUDENT` or `STAFF` | Required | User role detected automatically upon login |
 
-### Listing Entity
+### 6.2 Listing Entity
 
 | Attribute | Type / Constraints | Required? | Description |
 |---|---|---|---|
 | `id` | Integer, Primary Key | Required | Unique listing identifier |
-| `title` | String, 3–100 characters | Required | Listing title |
-| `description` | String, 1–500 characters | Required | Listing description |
-| `category` | String, maximum 50 characters | Required | Fixed list: `Electronics`, `Documents`, `Clothing`, `Accessories`, `Other` |
-| `type` | `LOST` or `FOUND` | Required | Distinguishes lost vs. found listings |
-| `location` | String, 2–100 characters | Required | Campus location where the item was lost or found |
-| `item_date` | Date (less than or equal to current date) | Required | Date the item was lost or found (distinct from `created_at`) |
+| `title` | String, 3–100 characters after trimming | Required | Listing title |
+| `description` | String, 1–500 characters after trimming | Required | Listing description |
+| `category` | Fixed list of predefined values | Required | One of: `Electronics`, `Documents`, `Clothing`, `Accessories`, `Other` |
+| `type` | `LOST` or `FOUND` | Required | Distinguishes lost and found listings |
+| `location` | String, 2–100 characters after trimming | Required | Campus location where the item was lost or found |
+| `item_date` | Valid calendar date, less than or equal to current date | Required | Date the item was lost or found; distinct from `created_at` |
 | `reporter_id` | Foreign Key → `User.id` | Required | Reference to the Student who created the listing |
-| `status` | `ACTIVE` or `RETURNED` | Required | Defaults to `ACTIVE` when created |
+| `status` | `ACTIVE` or `RETURNED` | Required | Listing status; defaults to `ACTIVE` |
 | `is_deleted` | Boolean | Required | Soft-delete flag; defaults to `false` |
-| `created_at` | Timestamp | Required | Automatic timestamp when the listing was created in the system |
+| `created_at` | Timestamp | Required | Automatically generated timestamp when the listing is created |
 
-## 7. Business Rules & Listing Visibility Matrix
+## 7. Business Rules and Listing Visibility
 
-- **BR1 (Account Provisioning):** Student accounts are pre-seeded or provisioned using the university's official student roster, while Staff accounts are created by the system administrator. Role assignment is read directly from the `User` record at login.
+- **BR1 — Role Detection:** The user's role shall be read from the associated `User` record after successful login. Users cannot assign or change their own roles through the application.
 
-- **BR2 (Listing Creation):** Only logged-in `STUDENT` accounts can create listings. New listings are saved with `status = ACTIVE`, `is_deleted = false`, and an automatic `created_at` timestamp.
+- **BR2 — Listing Creation:** Only authenticated `STUDENT` accounts can create LOST and FOUND listings. New listings shall be saved with `status = ACTIVE`, `is_deleted = false`, and an automatically generated `created_at` timestamp.
 
-- **BR3 (Date Validation):** `item_date` represents the date the item was lost or found and cannot be in the future. `created_at` records when the listing was submitted.
+- **BR3 — Listing Validation:** All required listing fields shall be validated according to the constraints defined in FR8. Leading and trailing whitespace shall be trimmed from required text fields before validation.
 
-- **BR4 (Contact Resolution):** The reporter's contact email is obtained from `User.university_email` via `reporter_id` and displayed on the listing details page without storing duplicate contact fields.
+- **BR4 — Date Validation:** `item_date` represents the date the item was lost or found and must be a valid date on or before the current date. `created_at` records when the listing was submitted to the system.
 
-- **BR5 (Soft Deletion):** Removing a listing performs a Soft Delete (`is_deleted = true`). Records are never permanently deleted (`DELETE FROM`) via the application UI.
+- **BR5 — Contact Resolution:** The reporter's contact email shall be obtained from `User.university_email` through `reporter_id`. Contact information shall not be duplicated in the `Listing` entity.
 
-- **BR6 (Listing Visibility by Status and Role):**
+- **BR6 — Soft Deletion:** Removing a listing shall perform a Soft Delete by setting `is_deleted = true`. The application shall retain the database record instead of permanently deleting it.
 
-| Listing State (`status` & `is_deleted`) | Student Browse & Search | Student Listing Details View | Student Status Update | Staff Management View | Database Storage |
+- **BR7 — Student Listing Status Management:** Only the Student who created a listing may change its status from `ACTIVE` to `RETURNED`. Students cannot change another user's listing or soft-delete any listing.
+
+- **BR8 — Staff Listing Management:** Staff members can mark any active listing as returned and soft-delete inappropriate or invalid listings.
+
+- **BR9 — Search Behavior:** Student search shall operate on `title` and `description` fields of active, non-deleted listings. Search matching shall be case-insensitive and ignore leading and trailing whitespace. An empty query shall display all active, non-deleted listings.
+
+- **BR10 — Listing Visibility:** Listing visibility shall follow the following matrix:
+
+### Listing Visibility Matrix
+
+| Listing State | Student Browse & Search | Student Details View | Student Status Update | Staff Management View | Database Storage |
 |---|---|---|---|---|---|
 | `status = ACTIVE`, `is_deleted = false` | Visible | Viewable | Own listings only | Visible | Stored |
-| `status = RETURNED`, `is_deleted = false` | Hidden | Blocked (Error shown) | Not allowed | Visible | Stored |
-| `is_deleted = true` (Soft-Deleted) | Hidden | Blocked (Error shown) | Not allowed | Hidden | Stored (Archived) |
+| `status = RETURNED`, `is_deleted = false` | Hidden | Blocked | Not allowed | Visible | Stored |
+| `is_deleted = true` | Hidden | Blocked | Not allowed | Hidden | Stored |
 
-- **BR7 (Student Listing Status Management):** Only the Student who created a listing may change its status from `ACTIVE` to `RETURNED`. Students cannot change another user's listing or soft-delete any listing.
-
-- **BR8 (Offline Verification):** Ownership verification and physical handover happen in person outside the application.
+- **BR11 — Offline Verification:** Ownership verification and physical item handover take place in person, outside the application.
 
 ## 8. Out of Scope
 
-The following features will not be implemented:
+The following features are not included in the current project scope:
 
-- Self-registration or public role elevation UI.
-- Ownership claims, online verification, or dispute management.
-- Automated listing matching.
 - In-app messaging or chat.
-- Email, SMS, or push notifications.
-- Advanced search filters, rewards, user ratings, or analytics dashboards.
+- Phone number sharing.
+- Automated item matching.
+- Notifications through email, SMS, or push services.
+- Online ownership verification, ownership claims, or dispute resolution.
+- Physical item handover and ownership verification workflows inside the application.
 
 ## 9. Completion Criteria
 
-The system is considered complete when:
+The system shall be considered complete when all of the following conditions are satisfied:
 
-1. Students and Staff can log in and their role is automatically detected from their account.
+1. Students and Staff can log in using registered university credentials, and their roles are automatically detected.
 
-2. Students can submit valid lost and found listings (`item_date` and all required fields), and invalid inputs are rejected with clear errors.
+2. Invalid login attempts, including incorrect credentials and empty or whitespace-only fields, are rejected appropriately.
 
-3. Listings persist in the database with `created_at`, `status = ACTIVE`, and `is_deleted = false`.
+3. Students can create valid LOST and FOUND listings, and invalid submissions are rejected according to the defined validation rules.
 
-4. Students can browse and search active listings across `title` and `description`, view listing details showing the reporter's `university_email`, and mark their own active listings as `RETURNED`.
+4. New listings are stored with the correct `type`, `reporter_id`, `created_at`, `status = ACTIVE`, and `is_deleted = false` values.
 
-5. Staff can view active and returned non-deleted listings, mark active listings as `RETURNED`, and soft-delete (`is_deleted = true`) inappropriate listings.
+5. Students can browse and search active listings, including both LOST and FOUND types, and the search behavior follows the defined matching and empty-query rules.
 
-6. Visibility rules for `ACTIVE`, `RETURNED`, and `is_deleted = true` listings work strictly according to the visibility matrix.
+6. Students can view active listing details and the reporter's university email without access to private account information.
+
+7. Students can mark their own active listings as `RETURNED`, but cannot change another Student's listing status.
+
+8. Staff can view and search active and returned non-deleted listings, mark active listings as `RETURNED`, and soft-delete inappropriate or invalid listings.
+
+9. Returned listings are hidden from Student browsing and search results but remain visible to Staff.
+
+10. Soft-deleted listings are hidden from all Student and Staff views while their records remain stored in the database.
+
+11. Authentication, role-based authorization, listing ownership restrictions, and the defined error responses are enforced correctly.
