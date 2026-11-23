@@ -6,6 +6,8 @@ Find My is a university-based Lost and Found Management System designed to help 
 
 The system also allows Staff members to review and manage listings, mark items as returned, and remove inappropriate or invalid listings.
 
+**Terminology:** In this document and in all related project documents, `Listing` refers to a single lost or found report. The name `Item` used in the architecture document refers to the same concept and shall be aligned with `Listing`.
+
 ## 2. Scope
 
 The system supports the following core workflows:
@@ -44,9 +46,9 @@ Physical item handover and ownership verification take place outside the applica
 
 - **FR3 — Invalid Credentials:** The system shall reject login attempts with an unregistered email or incorrect password. The error message shall not reveal which credential was incorrect.
 
-- **FR4 — Email Matching:** Login email matching shall be case-insensitive and shall ignore leading and trailing whitespace.
+- **FR4 — Email Matching:** Login email matching shall be case-insensitive and shall ignore leading and trailing whitespace. The stored `university_email` shall be normalized in the same way (trimmed and lowercased), and uniqueness shall be enforced on the normalized value, so that two accounts cannot differ only by letter case.
 
-- **FR5 — Protected Access:** The system shall prevent unauthenticated users from accessing protected pages and operations. Unauthenticated users attempting to access protected pages shall be redirected to the login view.
+- **FR5 — Protected Access:** The system shall prevent unauthenticated users from accessing protected pages and operations. Unauthenticated users attempting to access protected web pages shall be redirected to the login view. Unauthenticated requests to API endpoints shall instead receive HTTP `401 Unauthorized` (see FR33).
 
 ### 4.2 Listing Creation
 
@@ -173,8 +175,8 @@ A single `Listing` entity is used for both lost and found listings. Contact info
 |---|---|---|---|
 | `id` | Integer, Primary Key | Required | Unique user identifier |
 | `name` | String, maximum 100 characters | Required | User's full name |
-| `university_email` | String, Unique, maximum 255 characters | Required | University email used for login and listing contact |
-| `password` | String, stores a password hash | Required | Securely stored password hash |
+| `university_email` | String, Unique (after normalization), maximum 255 characters | Required | University email used for login and listing contact. Stored trimmed and in lowercase. |
+| `password_hash` | String | Required | Securely stored password hash. The `password` value entered at login is compared against this field and is never stored in plain text. |
 | `role` | `STUDENT` or `STAFF` | Required | User role detected automatically upon login |
 
 ### 6.2 Listing Entity
@@ -184,7 +186,7 @@ A single `Listing` entity is used for both lost and found listings. Contact info
 | `id` | Integer, Primary Key | Required | Unique listing identifier |
 | `title` | String, 3–100 characters after trimming | Required | Listing title |
 | `description` | String, 1–500 characters after trimming | Required | Listing description |
-| `category` | Fixed list of predefined values | Required | One of: `Electronics`, `Documents`, `Clothing`, `Accessories`, `Other` |
+| `category` | Fixed list of predefined values | Required | One of: `Electronics`, `Documents`, `Clothing`, `Accessories`, `Other`. Each value is a fixed constant; implementations may store it as an enumeration, but the displayed label must match these names. |
 | `type` | `LOST` or `FOUND` | Required | Distinguishes lost and found listings |
 | `location` | String, 2–100 characters after trimming | Required | Campus location where the item was lost or found |
 | `item_date` | Valid calendar date, less than or equal to current date | Required | Date the item was lost or found; distinct from `created_at` |
@@ -224,6 +226,13 @@ A single `Listing` entity is used for both lost and found listings. Contact info
 | `is_deleted = true` | Hidden | Blocked | Not allowed | Hidden | Stored |
 
 - **BR11 — Offline Verification:** Ownership verification and physical item handover take place in person, outside the application.
+
+- **BR12 — Management Request Check Order:** For Student and Staff management requests (status update or Soft Delete), the system shall evaluate the following conditions in this order and return the first applicable error:
+  1. Unauthenticated request: HTTP `401 Unauthorized`.
+  2. Authenticated user without the role required for the operation (a Student attempting a Staff-only operation): HTTP `403 Forbidden`.
+  3. Listing does not exist or has `is_deleted = true`: HTTP `404 Not Found`.
+  4. Student does not own the listing: HTTP `403 Forbidden`.
+  5. Listing is already `RETURNED`: informative status error.
 
 ## 8. Out of Scope
 

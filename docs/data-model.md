@@ -21,7 +21,7 @@ erDiagram
         int id PK
         string name
         string university_email UK
-        string password
+        string password_hash
         enum role
     }
 
@@ -62,13 +62,13 @@ The `User` entity stores registered university account information and determine
 |---|---|---|---|
 | `id` | Integer | Primary Key | Unique identifier of the user |
 | `name` | String | Required, maximum 100 characters | User's full name |
-| `university_email` | String | Required, Unique, maximum 255 characters | University email used for authentication and contact |
-| `password` | String | Required, stores a password hash | Securely stored password hash |
+| `university_email` | String | Required, Unique after normalization, maximum 255 characters | University email used for authentication and contact. Stored trimmed and in lowercase. |
+| `password_hash` | String | Required, stores a password hash | Securely stored password hash. The `password` value entered at login is compared against this field. |
 | `role` | Enum | Required: `STUDENT`, `STAFF` | Determines the user's access permissions |
 
 **Business Rules:**
 
-- Every user must have a unique university email.
+- Every user must have a unique university email, checked on the normalized (trimmed, lowercase) value.
 - Login email matching is case-insensitive and ignores leading and trailing whitespace.
 - Passwords must be stored as secure hashes, never as plain text.
 - The user's role is automatically detected from the `User` record after successful authentication.
@@ -138,6 +138,8 @@ The `category` attribute must contain one of the following predefined values:
 | `Clothing` |
 | `Accessories` |
 | `Other` |
+
+Each category value is a fixed constant. Implementations may store it as an enumeration (for example `ELECTRONICS` in the class diagram), but the displayed label must match the names above.
 
 ### 4.4 Listing Status
 
@@ -240,7 +242,7 @@ The relationship between `User` and `Listing` must preserve data integrity.
 
 ### 8.3 Unique Constraint
 
-- `User.university_email` must be unique.
+- `User.university_email` must be unique after normalization (trimmed and lowercased).
 - Email matching during login must be case-insensitive and ignore leading and trailing whitespace.
 
 ### 8.4 Data Retention
