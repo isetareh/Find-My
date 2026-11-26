@@ -1,55 +1,65 @@
 # Find My — Activity Diagram
 
-The flowchart below models the complete end-to-end workflow of the Find My application, aligned with `docs/SRS.md` and `docs/user-stories.md` (US1–US7).
+This activity diagram models the end-to-end workflows of **Find My** in alignment with `docs/SRS.md` and `docs/user-stories.md` (US1–US7).
 
 ```mermaid
 flowchart TD
-    A([Start]) --> B[Enter Login Credentials]
-    B --> B1{Valid Credentials?}
-    B1 -->|No: Show Error| B
-    B1 -->|Yes| C{Account Role?}
+    A([Start]) --> B["Enter university_email and password"]
+    B --> B1{"Non-empty & valid credentials?"}
+    B1 -->|"No: Show generic error"| B
+    B1 -->|"Yes: Detect role (STUDENT or STAFF)"| C{"User Role?"}
 
-    C -->|Student| D{Choose Student Action}
-    C -->|Staff| S[View or Search Non-Deleted Listings]
+    C -->|"STUDENT"| D{"Choose Student Action"}
+    C -->|"STAFF"| S1["View or search non-deleted listings (is_deleted = false)"]
 
-    D -->|Create LOST or FOUND Listing| E[Enter Required Listing Details]
-    E --> E1{Valid Input & item_date <= Today?}
-    E1 -->|No: Show Validation Error| E
-    E1 -->|Yes| F[Save Listing: ACTIVE, is_deleted = false]
-    F --> G[Display in Active Listings]
-    G --> Z([End])
+    %% Create LOST or FOUND Listing (US2, US3)
+    D -->|"Create LOST or FOUND listing"| E1["Enter title, description, category, location, item_date"]
+    E1 --> E2{"Valid fields & item_date <= today?"}
+    E2 -->|"No: Show validation error"| E1
+    E2 -->|"Yes"| E3["Save Listing (ACTIVE, is_deleted = false, created_at = now)"]
+    E3 --> Z([End])
 
-    D -->|Browse or Search Listings| H[Browse or Search Active Listings]
-    H --> I[Select Active Listing]
-    I --> J[View Listing Details & Reporter Email]
-    J --> K{Relevant Listing?}
-    K -->|No| H
-    K -->|Yes| L
+    %% Browse, Search & View Listing Details (US4, US5)
+    D -->|"Browse or search active listings"| F1["Query ACTIVE & non-deleted listings"]
+    F1 --> F2{"Any matching listings?"}
+    F2 -->|"No: Show 'No matching items found.' & retry"| F1
+    F2 -->|"Yes"| F3["Select a listing to view details"]
+    F3 --> F4{"Exists, status = ACTIVE & is_deleted = false?"}
+    F4 -->|"No: Show 'Listing not found or no longer available'"| F1
+    F4 -->|"Yes: Show details & reporter university_email"| F5{"Relevant listing?"}
+    F5 -->|"No"| F1
+    F5 -->|"Yes"| G1
 
-    D -->|Mark Own Listing Returned| M1[Select Own Active Listing]
-    M1 --> M2{Is Owner & Status = ACTIVE?}
-    M2 -->|No: 403 or Error| Z
-    M2 -->|Yes| U[Update status = RETURNED]
+    %% Student Mark Own Listing as RETURNED (US7)
+    D -->|"Mark own active listing as RETURNED"| H1["Select own listing & request RETURNED"]
+    H1 --> H2{"Listing exists & is_deleted = false?"}
+    H2 -->|"No: HTTP 404 Not Found"| Z
+    H2 -->|"Yes"| H3{"Current user is reporter_id?"}
+    H3 -->|"No: HTTP 403 Forbidden"| Z
+    H3 -->|"Yes"| H4{"status == ACTIVE?"}
+    H4 -->|"No (Already RETURNED): Show status error"| Z
+    H4 -->|"Yes: Set status = RETURNED"| Z
 
-    subgraph External [Outside Application: In-Person Process]
-        L[Contact Reporter via University Email] --> M[Arrange In-Person Meeting]
-        M --> N[Verify Ownership & Hand Over Item]
+    %% Offline In-Person Process
+    subgraph Offline ["Outside Application: In-Person Process"]
+        G1["Contact reporter via university_email"] --> G2["Arrange in-person meeting"]
+        G2 --> G3["Verify ownership & hand over item"]
     end
 
-    N -->|Reporter Updates Status| M1
-    N -->|Or Inform Staff| S
+    G3 -->|"Student marks own listing RETURNED"| H1
+    G3 -->|"Or inform Staff"| S1
 
-    S --> T{Select Staff Action}
-    T -->|Mark Active Listing Returned| U
-    T -->|Remove Listing| V[Soft Delete: is_deleted = true]
-    T -->|No Action| Z
-    U --> Z
-    V --> Z
-```
+    %% Staff Management Flow (US6)
+    S1 --> S2{"Select Staff management action"}
+    S2 -->|"No action"| Z
+    S2 -->|"Mark active listing as RETURNED"| T1["Select target listing"]
+    T1 --> T2{"Listing exists & is_deleted = false?"}
+    T2 -->|"No: HTTP 404 Not Found"| S1
+    T2 -->|"Yes"| T3{"status == ACTIVE?"}
+    T3 -->|"No (Already RETURNED): Show status error"| S1
+    T3 -->|"Yes: Set status = RETURNED"| S1
 
-### Diagram Notes
-* **Authentication & Role Detection (US1):** Failed logins loop back with a generic error; valid logins automatically route users based on their stored `STUDENT` or `STAFF` role.
-* **Unified Listing Creation (US2 & US3):** Both `LOST` and `FOUND` listings pass through the same validation check (`E1`) before saving with `status = ACTIVE` and `is_deleted = false`.
-* **Student Ownership Management (US7):** Students can mark their own `ACTIVE` listings as `RETURNED`, either directly from their menu or after an in-person handover.
-* **Staff Moderation (US6):** Staff can view all non-deleted listings (`ACTIVE` and `RETURNED`), mark any active listing as `RETURNED`, or soft-delete inappropriate listings (`is_deleted = true`).
-* **System Boundary:** Email communication, physical ownership verification, and item handover occur strictly outside the software.
+    S2 -->|"Soft-delete listing"| U1["Select target listing"]
+    U1 --> U2{"Listing exists & is_deleted = false?"}
+    U2 -->|"No: HTTP 404 Not Found"| S1
+    U2 -->|"Yes: Set is_deleted = true (keep record)"| S1
