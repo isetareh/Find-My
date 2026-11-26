@@ -28,11 +28,13 @@ So that I can access the system according to my role.
 **Acceptance Criteria**
 
 1. **Success — Valid Credentials & Automatic Role Detection:** A Student or Staff member logging in with a registered `university_email` and matching password is authenticated. Their role (`STUDENT` or `STAFF`) is automatically detected from their account, and they are routed to the permitted view for their role.
-2. **Invalid Input — Incorrect Credentials:** The system rejects logins with an unregistered email or incorrect password, returning an error message without specifying which field was invalid.
+2. **Invalid Input — Incorrect Credentials:** The system rejects logins with an unregistered email or incorrect password, returning a generic error message without specifying which credential was incorrect.
 3. **Invalid Input — Empty Fields:** The system rejects login submissions where the email or password is empty or contains only whitespace.
-4. **Boundary — Case Insensitivity:** Login email matching is case-insensitive and trims leading and trailing whitespace.
-5. **Failure — Unauthenticated Access:** Unauthenticated requests to protected pages or endpoints are blocked and redirected to the login view.
-6. **Failure — Unauthorized Role Access:** An authenticated Student attempting to access Staff-only management operations receives an HTTP 403 Forbidden error.
+4. **Boundary — Case and Whitespace Insensitivity:** Login email matching is case-insensitive and trims leading and trailing whitespace. The stored `university_email` is normalized by trimming whitespace and converting letters to lowercase. Email uniqueness is enforced on the normalized value, preventing accounts whose email addresses differ only by letter case or surrounding whitespace.
+5. **Failure — Unauthenticated Web Access:** Unauthenticated users attempting to access protected web pages are redirected to the login view.
+6. **Failure — Unauthenticated API Access:** Unauthenticated requests to protected API endpoints are rejected with HTTP `401 Unauthorized` and are not redirected to the login page.
+7. **Failure — Unauthorized Role Access:** An authenticated Student attempting to access Staff-only management operations receives HTTP `403 Forbidden`.
+8. **Security — Credential Protection:** Passwords are stored as secure password hashes. Password hashes and private credentials are never exposed through API responses or user interface views.
 
 ---
 
@@ -52,7 +54,7 @@ So that other students can find my listing and contact me.
 4. **Boundary — Invalid / Future Date:** The system accepts today's date or any past calendar date for `item_date` and rejects invalid calendar dates or dates in the future without saving the listing.
 5. **Invalid Input — Missing Required Fields:** The system rejects submissions missing any required field (`title`, `description`, `category`, `location`, `item_date`) or containing only whitespace in required text fields. A validation error is displayed, and the listing is not saved.
 6. **Invalid Input — Invalid Category:** The system rejects submissions with a category that is not included in the predefined list.
-7. **Failure — Role & Authentication Restriction:** Unauthenticated users and Staff accounts cannot submit lost item listings.
+7. **Failure — Role & Authentication Restriction:** Unauthenticated users cannot submit lost item listings and receive HTTP `401 Unauthorized` when making API requests. Staff accounts cannot submit lost item listings and receive HTTP `403 Forbidden`.
 
 ---
 
@@ -72,7 +74,7 @@ So that its owner can find my listing and contact me.
 4. **Boundary — Invalid / Future Date:** The system accepts today's date or any past calendar date for `item_date` and rejects invalid calendar dates or dates in the future without saving the listing.
 5. **Invalid Input — Missing Required Fields:** The system rejects submissions missing any required field (`title`, `description`, `category`, `location`, `item_date`) or containing only whitespace in required text fields. A validation error is displayed, and the listing is not saved.
 6. **Invalid Input — Invalid Category:** The system rejects submissions with a category that is not included in the predefined list.
-7. **Failure — Role & Authentication Restriction:** Unauthenticated users and Staff accounts cannot submit found item listings.
+7. **Failure — Role & Authentication Restriction:** Unauthenticated users cannot submit found item listings and receive HTTP `401 Unauthorized` when making API requests. Staff accounts cannot submit found item listings and receive HTTP `403 Forbidden`.
 
 ---
 
@@ -106,9 +108,10 @@ So that I can evaluate the item and contact the reporter via university email.
 **Acceptance Criteria**
 
 1. **Success — View Active Listing & Reporter Email:** A logged-in Student opening an active listing sees its `title`, `description`, `category`, `type` (`LOST` / `FOUND`), `location`, and `item_date`. The reporter's `university_email` is retrieved directly from the associated `User` account through `reporter_id`.
-2. **Security — Data Protection:** The system never exposes the reporter's password hash or other private account fields.
+2. **Security — Private Account Data Protection:** The system never exposes the reporter's `password_hash`, authentication credentials, or other private account fields in listing details or user-facing API responses. Only the reporter's university email is exposed as contact information.
 3. **Failure — Deleted, Returned, or Non-Existent Listings Not Viewable:** If a Student requests a listing that does not exist, has `is_deleted = true` (soft-deleted), or has `status = RETURNED`, the listing is not viewable, and the system displays the following error: `"Listing not found or no longer available"`.
-4. **Failure — Unauthorized Controls:** Student views do not render Staff management controls, and direct requests by Students to Staff management endpoints are rejected with HTTP 403.
+4. **Failure — Unauthorized Controls:** Student views do not render Staff management controls, and direct requests by Students to Staff management endpoints are rejected with HTTP `403 Forbidden`.
+5. **Scope — Listing Images:** Listing images are not part of the current system requirements. Listing details do not require an image or a placeholder image.
 
 ---
 
@@ -120,14 +123,21 @@ As a Staff member,
 I want to manage listings,  
 So that I can mark returned items and remove inappropriate listings.
 
+**Preconditions**
+
+- The user must be authenticated.
+- The authenticated user's role must be `STAFF` to access Staff management operations.
+
 **Acceptance Criteria**
 
 1. **Success — View Active and Returned Listings:** An authenticated Staff member can view and search all non-deleted listings (`is_deleted = false`), including both `ACTIVE` and `RETURNED` listings.
 2. **Success — Mark Any Active Listing as Returned:** Staff can mark any `ACTIVE` listing as returned, updating its `status` to `RETURNED`. Returned listings remain visible to Staff in the management view but no longer appear in Student active browse or search results.
 3. **Success — Remove Listing (Soft Delete Behavior):** Staff can remove an inappropriate listing via Soft Delete, which sets `is_deleted = true` in the database without permanently deleting the record. Soft-deleted listings are hidden from all Student and Staff UI views and search results.
-4. **Boundary — Already Returned Listing:** Attempting to mark an already `RETURNED` listing as returned is rejected with an informative status error.
-5. **Failure — Non-Existent or Already Soft-Deleted Listing:** Attempting to update the status of or soft-delete a non-existent listing ID or a listing with `is_deleted = true` returns an HTTP 404 Not Found error. Such listings cannot be viewed or managed, even if their IDs are known.
-6. **Failure — Unauthorized Access:** An unauthenticated user attempting to mark a listing as returned or soft-delete a listing receives HTTP 401 Unauthorized. An authenticated Student attempting the same Staff-only operations receives HTTP 403 Forbidden.
+4. **Boundary — Already Returned Listing:** Attempting to mark an already `RETURNED` listing as returned is rejected with HTTP `409 Conflict` and an informative status error.
+5. **Failure — Non-Existent or Already Soft-Deleted Listing:** Attempting to update the status of or soft-delete a non-existent listing ID or a listing with `is_deleted = true` returns HTTP `404 Not Found`. Such listings cannot be viewed or managed, even if their IDs are known.
+6. **Failure — Unauthenticated Access:** An unauthenticated user attempting to mark a listing as returned or soft-delete a listing receives HTTP `401 Unauthorized`.
+7. **Failure — Unauthorized Role Access:** An authenticated Student attempting to perform Staff-only operations, including marking another Student's listing as returned or soft-deleting any listing, receives HTTP `403 Forbidden`.
+8. **Concurrency — Simultaneous Status Updates:** When multiple requests attempt to change the status of the same active listing simultaneously, the system shall ensure that the status transition is processed atomically. Only one request can successfully change the status from `ACTIVE` to `RETURNED`. Subsequent conflicting requests shall receive HTTP `409 Conflict` and an informative status error.
 
 ---
 
@@ -139,19 +149,36 @@ As a Student,
 I want to mark my own listing as returned after the lost or found item has been handed over,  
 So that the listing is no longer displayed as an active item.
 
+**Preconditions**
+
+- The user must be authenticated.
+- The authenticated user's role must be `STUDENT`.
+- The listing must belong to the authenticated Student.
+
 **Acceptance Criteria**
 
 1. **Success — Mark Own Active Listing as Returned:** A logged-in Student can change the status of their own `ACTIVE` listing to `RETURNED`.
 2. **Success — Immediate Removal from Student Listings:** After the status is changed to `RETURNED`, the listing no longer appears in Student browse or search results.
-3. **Failure — Unauthorized Ownership Access:** A Student attempting to change the status of another Student's listing receives an HTTP 403 Forbidden error.
-4. **Boundary — Already Returned Listing:** Attempting to mark an already `RETURNED` listing as returned is rejected with an informative status error.
-5. **Failure — Non-Existent or Soft-Deleted Listing:** Attempting to change the status of a non-existent listing or a listing with `is_deleted = true` returns an HTTP 404 Not Found error.
+3. **Failure — Unauthorized Ownership Access:** A Student attempting to change the status of another Student's listing receives HTTP `403 Forbidden`.
+4. **Boundary — Already Returned Listing:** Attempting to mark an already `RETURNED` listing as returned is rejected with HTTP `409 Conflict` and an informative status error.
+5. **Failure — Non-Existent or Soft-Deleted Listing:** Attempting to change the status of a non-existent listing or a listing with `is_deleted = true` returns HTTP `404 Not Found`.
+6. **Concurrency — Simultaneous Status Updates:** When multiple requests attempt to change the status of the same active listing simultaneously, the system shall ensure that the status transition is processed atomically. Only one request can successfully change the status from `ACTIVE` to `RETURNED`. Subsequent conflicting requests shall receive HTTP `409 Conflict` and an informative status error.
+7. **Failure — Staff-Only Operations:** Students cannot soft-delete listings or perform other Staff-only management operations.
 
 ---
 
-## Scope Restrictions
+## Scope Restrictions and Unresolved Decisions
+
+The following features are not included in the current implementation scope unless the project team explicitly approves them:
 
 - No online ownership claims or dispute resolution workflows.
 - No in-app messaging, chat, or phone number sharing.
 - No automated matching algorithms or notifications (email, push, SMS).
 - In-person ownership verification and item handover occur outside the software.
+- Listing images and image uploads are not supported.
+- Students cannot edit or cancel their listings in the current scope.
+- There is no defined workflow for reverting an incorrectly returned listing from `RETURNED` to `ACTIVE`.
+- Password recovery, account deactivation/reactivation, and account registration workflows are not defined in the current requirements.
+- Session expiration, session management, logout behavior, and login rate limiting require separate security decisions before implementation.
+- Permanent deletion and the retention period for soft-deleted records require a separate data-retention policy.
+
